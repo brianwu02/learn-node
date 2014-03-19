@@ -1,0 +1,12 @@
+<html>
+<head>
+  <title>Socket.io example application</title>
+  <script src="http://localhost:8000/socket.io/socket.io.js"></script>
+  <script>
+    var socket = io.connect('http://localhost:8000');
+    socket.emit('my event', 'hello world.');
+  </script>
+  <body>
+  </body>
+</head>
+</html>
