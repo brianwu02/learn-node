@@ -1,5 +1,5 @@
 var net = require('net');
-var client = net.connect({port:5432});
+var client = net.connect({port:8080});
 
 client.on('data', function(data) {
   var message = JSON.parse(data);

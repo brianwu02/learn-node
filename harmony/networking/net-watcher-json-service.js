@@ -12,7 +12,7 @@ var server = net.createServer(function(connection) {
 
   var watcher = fs.watch(filename, function() {
     //connection.write("file" + filename + " changed " + Date.now() + "\n");
-    connection.write(JSON.stringify({
+    connection.write(JSON.sringify({
       type: 'changed',
       file: filename,
       timestamp: Date.now()
@@ -31,6 +31,6 @@ if (!filename) {
   throw Error("no target filename was specified");
 }
 
-server.listen(5432, function() {
+server.listen(8080, function() {
   console.log("listening for subscribers..");
 });
