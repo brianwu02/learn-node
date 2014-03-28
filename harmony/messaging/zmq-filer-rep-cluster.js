@@ -9,12 +9,12 @@ if (cluster.isMaster) {
 
   // forward messages between router and dealer 
   router.on('message', function() {
-    var frames = Array.apply(null, arguments);
+    var frames = Array.prototype.slice.call(arguments);
     dealer.send(frames);
   });
 
   dealer.on('message', function() {
-    var frames = Array.apply(null, arguments);
+    var frames = Array.prototype.slice.call(arguments);
     router.send(frames);
   });
 
