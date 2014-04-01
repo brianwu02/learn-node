@@ -45,7 +45,7 @@ if (cluster.isMaster) {
   // the job queue.
   
   // create a series of numbers to be squared.
-  var numbers = _.range(100);
+  var numbers = _.range(100000);
 
 
   // initialize ready count that tracks workers.
@@ -123,13 +123,13 @@ if (cluster.isMaster) {
   workerPullSocket.on('message', function(data) {
     // parse the message
     var msg = JSON.parse(data);
-    console.log(msg);
 
-    /*workerPushSocket.send(JSON.stringify({
+    workerPushSocket.send(JSON.stringify({
       status: 'RESULT',
-      result: job,
+      //result: fact(msg.value),
+      result: Math.pow(msg.value, 2),
       pid: process.pid
-    }));*/
+    }));
   });
 
   // send a READY message to master process
