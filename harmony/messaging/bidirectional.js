@@ -56,6 +56,10 @@ if (cluster.isMaster) {
     console.log(data.toString('utf8'));
   });
 
+  //masterPushSocket.send(JSON.stringify({
+  //  jobs: 'do something'
+  //}));
+
   // spin up three worker processes.
   for (var i = 0; i < 3; i++) {
     cluster.fork();
@@ -75,6 +79,19 @@ if (cluster.isMaster) {
       console.log(err.message);
     }
   });
+  //Listen for messages on the PULL socket, and
+  //treat this as a job and respond by sending a result message out on to the PUSH socket.
+  workerPullSocket.on('message', function(data) {
+    console.log(process.pid + ' : ' + data.toString('utf8'));
+    workerPushSocket.send(JSON.stringify({
+      result: 'SOME RESULT'
+    }));
+  });
+
+  // send a READY message to master process
+  workerPushSocket.send(JSON.stringify({
+    status: 'READY'
+  }));
 
 
 }
