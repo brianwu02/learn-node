@@ -1,7 +1,7 @@
 /*  TODO:
  *  ---WORKFLOW---
- *  Master process will creates a (30) series of jobs and push on to a job queue.
- *  job: return the square of the number.
+ *  Master process will creates a (30) series of values.
+ *  Worker process will return the factorial of the number.
  *  
  *
  *  ---DESIGN---
@@ -43,12 +43,10 @@ var async = require('async');
 
 if (cluster.isMaster) {
   // the job queue.
-  var jobs = [];
-
+  
   // create a series of numbers to be squared.
-  var numbers = _.range(30);
+  var numbers = _.range(100);
 
-  var jobSent = false;
 
   // initialize ready count that tracks workers.
   var workerReady = 0;
@@ -79,10 +77,11 @@ if (cluster.isMaster) {
         console.log('All Subscribers are connected, Ready for work.');
         numbers.forEach(function(number) {
           masterPushSocket.send(JSON.stringify({
-            job: number 
+            value: number
           }));
         });
       }
+          
 
     } else if ( msg.status == 'RESULT') {
       console.log('pid: ' + msg.pid + ' sent result: ' + msg.result);
@@ -95,6 +94,17 @@ if (cluster.isMaster) {
   }
 
 } else {
+  // define factorial function each worker will execute
+  fact = function(n) {
+    if (n < 0) {
+      return -1;
+    } else if (n === 0) {
+      return 1;
+    } else {
+      return (n * fact(n - 1));
+    }
+  };
+
   //Create a PULL socket and connect it to the master's PUSH endpoint.
   var workerPullSocket = zmq.socket('pull').connect('ipc://masterPushSocket.ipc', function(err) {
     if (err) {
@@ -113,12 +123,13 @@ if (cluster.isMaster) {
   workerPullSocket.on('message', function(data) {
     // parse the message
     var msg = JSON.parse(data);
+    console.log(msg);
 
-    workerPushSocket.send(JSON.stringify({
+    /*workerPushSocket.send(JSON.stringify({
       status: 'RESULT',
-      result: Math.pow(msg.job, 2),
+      result: job,
       pid: process.pid
-    }));
+    }));*/
   });
 
   // send a READY message to master process
