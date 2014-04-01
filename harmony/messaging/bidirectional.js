@@ -35,14 +35,46 @@ var fs = require('fs');
 var zmq = require('zmq');
 
 if (cluster.isMaster) {
-  
-  // create a PUSH socket and bind to IPC endpoint. 
-  masterPushSocket = zmq.socket('push').bind('ipc://masterPushSocket.ipc');
-  
-  // create a PULL socket and bind to an IPC endpoint.
-  masterPullSocket = zmq.socket('pull').bind('ipc://masterPullSocket.ipc');
-  
 
+  // initialize ready count that tracks workers.
+  var workerReady = 0;
+  // create a PUSH socket and bind to IPC endpoint. 
+  masterPushSocket = zmq.socket('push').bind('ipc://masterPushSocket.ipc', function(err) {
+    if (err) {
+      console.log(err.message);
+    }
+  });
+  // create a PULL socket and bind to an IPC endpoint.
+  masterPullSocket = zmq.socket('pull').bind('ipc://masterPullSocket.ipc', function(err) {
+    if (err) {
+      console.log(err.message);
+    }
+  });
+  // listen for messages on PULL socket
+  masterPullSocket.on('message', function(data) {
+    console.log('got a message on masterPullSocket');
+    console.log(data.toString('utf8'));
+  });
+
+  // spin up three worker processes.
+  for (var i = 0; i < 3; i++) {
+    cluster.fork();
+  }
 
 } else {
+  //Create a PULL socket and connect it to the master's PUSH endpoint.
+  var workerPullSocket = zmq.socket('pull').connect('ipc://masterPushSocket.ipc', function(err) {
+    if (err) {
+      console.log(err.message);
+    }
+  });
+
+  //Create a PUSH socket and connect it to the master's PULL endpoint.
+  var workerPushSocket = zmq.socket('push').connect('ipc://masterPullSocket.ipc', function(err) {
+    if (err) {
+      console.log(err.message);
+    }
+  });
+
+
 }
