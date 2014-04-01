@@ -34,28 +34,21 @@
  *      - send a READY message out on the PUSH socket.
  *
  *  Result messages should include processID of worker. 
- *
  */
 var cluster = require('cluster');
 var fs = require('fs');
 var zmq = require('zmq');
 var _ = require('underscore');
+var async = require('async');
 
 if (cluster.isMaster) {
   // the job queue.
   var jobs = [];
+
   // create a series of numbers to be squared.
-  
   var numbers = _.range(30);
-  // push sqrt job on to the jobs queue.
 
-  numbers.forEach(function(data) {
-    jobs.push(function(callback) {
-      callback(null, Math.pow(data, 2));
-    });
-  });
-
-
+  var jobSent = false;
 
   // initialize ready count that tracks workers.
   var workerReady = 0;
@@ -76,20 +69,24 @@ if (cluster.isMaster) {
   // listen for messages on PULL socket
   masterPullSocket.on('message', function(data) {
     var msg = JSON.parse(data);
-    console.log('got a READY status from: ' + msg.pid);
+    //console.log('got a READY status from: ' + msg.pid);
     
     if (msg.status == 'READY') {
       workerReady += 1;
       console.log('workerReady Count: ' + workerReady);
-    } else if ( msg.status == 'RESULT') {
-      console.log(msg.result);
-    }
 
-    if (workerReady == 3) {
-    console.log('Pushing jobs since workerReady == 3');
+      if (workerReady == 3) {
+        console.log('All Subscribers are connected, Ready for work.');
+        numbers.forEach(function(number) {
+          masterPushSocket.send(JSON.stringify({
+            job: number 
+          }));
+        });
+      }
+
+    } else if ( msg.status == 'RESULT') {
+      console.log('pid: ' + msg.pid + ' sent result: ' + msg.result);
     }
-  
-  
   });
 
   // spin up three worker processes.
@@ -111,16 +108,16 @@ if (cluster.isMaster) {
       console.log(err.message);
     }
   });
-  //Listen for messages on the PULL socket, and
-  //treat this as a job and respond by sending a result message out on to the PUSH socket.
-  workerPullSocket.on('message', function(data) {
-    console.log(process.pid + ' : ' + data.toString('utf8'));
-    var job = JSON.parse(data);
-    console.log(job);
 
+  //Listen for messages on the PULL socket, and treat this as a job and respond by sending a result message out on to the PUSH socket.
+  workerPullSocket.on('message', function(data) {
+    // parse the message
+    var msg = JSON.parse(data);
 
     workerPushSocket.send(JSON.stringify({
-      result: 'SOME RESULT'
+      status: 'RESULT',
+      result: Math.pow(msg.job, 2),
+      pid: process.pid
     }));
   });
 
