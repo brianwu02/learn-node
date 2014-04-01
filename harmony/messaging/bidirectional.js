@@ -1,5 +1,4 @@
 /*  TODO:
- *  
  *  MASTER process should:
  *      - Create a PUSH socket and bind it to an IPC endpoint - this socket
  *      will for sending jobs to the worker.
@@ -28,4 +27,22 @@
  *
  *      - send a READY message out on the PUSH socket.
  *
+ *  Result messages should include processID of worker. 
+ *
  */
+var cluster = require('cluster');
+var fs = require('fs');
+var zmq = require('zmq');
+
+if (cluster.isMaster) {
+  
+  // create a PUSH socket and bind to IPC endpoint. 
+  masterPushSocket = zmq.socket('push').bind('ipc://masterPushSocket.ipc');
+  
+  // create a PULL socket and bind to an IPC endpoint.
+  masterPullSocket = zmq.socket('pull').bind('ipc://masterPullSocket.ipc');
+  
+
+
+} else {
+}
