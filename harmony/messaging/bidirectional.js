@@ -40,16 +40,20 @@ var fs = require('fs');
 var zmq = require('zmq');
 var _ = require('underscore');
 var async = require('async');
+var cpuCount = require('os').cpus().length;
 
 if (cluster.isMaster) {
   // the job queue.
   
   // create a series of numbers to be squared.
-  var numbers = _.range(100000);
-
+  var numbers = _.range(20000);
 
   // initialize ready count that tracks workers.
   var workerReady = 0;
+
+  // keep track of the job#
+  var jobNum = 1;
+
   // create a PUSH socket and bind to IPC endpoint. 
   masterPushSocket = zmq.socket('push').bind('ipc://masterPushSocket.ipc', function(err) {
     if (err) {
@@ -73,25 +77,47 @@ if (cluster.isMaster) {
       workerReady += 1;
       console.log('workerReady Count: ' + workerReady);
 
-      if (workerReady == 3) {
+      if (workerReady == 5) {
         console.log('All Subscribers are connected, Ready for work.');
         numbers.forEach(function(number) {
           masterPushSocket.send(JSON.stringify({
-            value: number
+            value: number,
+            jobNum: jobNum
           }));
+        jobNum += 1;
         });
+       /*
+       async.each(numbers, function(number, callback) {
+         setTimeout(function() {
+          masterPushSocket.send(JSON.stringify({
+            value: number,
+            jobNum: jobNum
+          }));
+          jobNum += 1;
+          //callback();
+         }, 50);
+       });*/
       }
           
 
     } else if ( msg.status == 'RESULT') {
-      console.log('pid: ' + msg.pid + ' sent result: ' + msg.result);
+      console.log('jobNum: ' + msg.jobNum +' pid: ' + msg.pid + ' sent result: ' + msg.result);
     }
   });
 
   // spin up three worker processes.
-  for (var i = 0; i < 3; i++) {
-    cluster.fork();
+  for (var i=0; i<cpuCount-1;i++) {
+   var worker = cluster.fork();
+   
+   // on cluster death
+   cluster.on('death', function(worker) {
+     console.log('worker ' + worker.pid + 'died');
+   });
   }
+
+  //setTimeout(function() {
+  //  console.log(jobNum);
+  //}, 2000);
 
 } else {
   // define factorial function each worker will execute
@@ -104,6 +130,7 @@ if (cluster.isMaster) {
       return (n * fact(n - 1));
     }
   };
+
 
   //Create a PULL socket and connect it to the master's PUSH endpoint.
   var workerPullSocket = zmq.socket('pull').connect('ipc://masterPushSocket.ipc', function(err) {
@@ -127,7 +154,9 @@ if (cluster.isMaster) {
     workerPushSocket.send(JSON.stringify({
       status: 'RESULT',
       //result: fact(msg.value),
-      result: Math.pow(msg.value, 2),
+      //result: Math.pow(msg.value, 2),
+      result: msg.value,
+      jobNum: msg.jobNum,
       pid: process.pid
     }));
   });
